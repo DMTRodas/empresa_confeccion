@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Clientes - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1>👥 Gestión de Clientes</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+                <button class="btn btn-primary" onclick="mostrarModalCliente()">
+                    ➕ Agregar Cliente
+                </button>
+            </div>
+        </div>
+        <p class="page-subtitle">Administra la base de clientes de la empresa</p>
+    </div>
+
+    <!-- Tabla de Clientes -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Base de Clientes</h3>
+            <div class="table-actions">
+                <span class="result-count">
+                    Mostrando {{ clientes|length }} clientes
+                </span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Empresa</th>
+                        <th>Contacto</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Dirección</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td class="product-id">#{{ cliente.id }}</td>
+                        <td class="product-info">
+                            <div class="product-name">{{ cliente.empresa }}</div>
+                        </td>
+                        <td>{{ cliente.contacto or 'N/A' }}</td>
+                        <td>{{ cliente.telefono or 'N/A' }}</td>
+                        <td>
+                            {% if cliente.email and cliente.email != 'N/A' %}
+                            <small>{{ cliente.email }}</small>
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ cliente.direccion or 'N/A' }}</td>
+                        <td>
+                            <span class="badge {% if cliente.activo == '✅' %}badge-producto{% else %}badge-materia{% endif %}">
+                                {{ cliente.activo }}
+                            </span>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn-action btn-edit" onclick="editarCliente({{ cliente.id }})" title="Editar cliente">
+                                ✏️
+                            </button>
+                            <button class="btn-action btn-delete" onclick="eliminarCliente({{ cliente.id }}, '{{ cliente.empresa }}')" title="Eliminar cliente">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-content">
+                                <div class="empty-icon">👥</div>
+                                <h4>No hay clientes registrados</h4>
+                                <p>Comienza agregando tu primer cliente.</p>
+                                <button class="btn btn-primary" onclick="mostrarModalCliente()">
+                                    ➕ Agregar Primer Cliente
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Clientes -->
+<div id="modalCliente" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTituloCliente">Agregar Cliente</h3>
+            <span class="close" onclick="cerrarModalCliente()">&times;</span>
+        </div>
+        <form id="formCliente" class="modal-form">
+            <input type="hidden" id="clienteId" name="id">
+            
+            <div class="form-group">
+                <label for="clienteEmpresa">Nombre Empresa *</label>
+                <input type="text" id="clienteEmpresa" name="empresa" required 
+                       placeholder="Ej: Eco Moda" autocomplete="organization">
+            </div>
+            
+            <div class="form-group">
+                <label for="clienteContacto">Contacto Principal *</label>
+                <input type="text" id="clienteContacto" name="contacto" required 
+                       placeholder="Ej: Beatriz Pinzon" autocomplete="name">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="clienteTelefono">Teléfono</label>
+                    <input type="text" id="clienteTelefono" name="telefono" 
+                           placeholder="1234-5678" autocomplete="tel">
+                </div>
+                <div class="form-group">
+                    <label for="clienteEmail">Email</label>
+                    <input type="email" id="clienteEmail" name="email" 
+                           placeholder="cliente@empresa.com" autocomplete="email">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="clienteDireccion">Dirección</label>
+                <textarea id="clienteDireccion" name="direccion" rows="2" 
+                          placeholder="Dirección completa..." autocomplete="street-address"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalCliente()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    💾 Guardar Cliente
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para clientes - MATCH PERFECTO CON DASHBOARD */
+.admin-container {
+    padding: 2rem 0;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 2.2rem;
+}
+
+.page-subtitle {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Tabla - Estilo consistente */
+.table-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.result-count {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+    vertical-align: top;
+}
+
+/* Estilos específicos de celdas */
+.product-id {
+    font-weight: 600;
+    color: #3498db;
+    font-family: 'Courier New', monospace;
+}
+
+.product-info {
+    min-width: 150px;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+/* Badges y Estados - Consistentes con productos */
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-producto {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-materia {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Botones de Acción - Igual que productos */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Estados vacíos */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-content {
+    text-align: center;
+    color: #7f8c8d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.empty-content p {
+    margin: 0 0 2rem 0;
+}
+
+/* Modal - Estilo consistente */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-top: 5px solid #3498db;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.close {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.3s;
+}
+
+.close:hover {
+    color: #e74c3c;
+}
+
+.modal-form {
+    padding: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Botones - Sistema de diseño unificado */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .table-actions {
+        justify-content: space-between;
+    }
+    
+    .data-table {
+        font-size: 0.9rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let clienteEditando = null;
+
+function mostrarModalCliente(cliente = null) {
+    clienteEditando = cliente;
+    const modal = document.getElementById('modalCliente');
+    const titulo = document.getElementById('modalTituloCliente');
+    
+    if (cliente) {
+        titulo.textContent = 'Editar Cliente';
+        document.getElementById('clienteId').value = cliente.id;
+        document.getElementById('clienteEmpresa').value = cliente.empresa;
+        document.getElementById('clienteContacto').value = cliente.contacto;
+        document.getElementById('clienteTelefono').value = cliente.telefono || '';
+        document.getElementById('clienteEmail').value = cliente.email || '';
+        document.getElementById('clienteDireccion').value = cliente.direccion || '';
+    } else {
+        titulo.textContent = 'Agregar Cliente';
+        document.getElementById('formCliente').reset();
+        document.getElementById('clienteId').value = '';
+    }
+    
+    modal.style.display = 'block';
+}
+
+function cerrarModalCliente() {
+    const modal = document.getElementById('modalCliente');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    clienteEditando = null;
+}
+
+function editarCliente(id) {
+    console.log('Editando cliente ID:', id);
+    
+    fetch(`/admin/clientes/${id}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            if (data.success) {
+                mostrarModalCliente(data.cliente);
+            } else {
+                alert('Error: ' + (data.error || 'No se pudo cargar el cliente'));
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert('Error al cargar el cliente: ' + error.message);
+        });
+}
+
+function eliminarCliente(id, nombre) {
+    console.log('Eliminando cliente ID:', id);
+    
+    if (confirm(`¿Está seguro de que desea eliminar al cliente "${nombre}"?`)) {
+        fetch(`/admin/clientes/${id}/eliminar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('✅ Cliente eliminado correctamente');
+                // Recargar después de un breve delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else {
+                alert('❌ Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error completo:', error);
+            alert('❌ Error al eliminar cliente: ' + error.message);
+        });
+    }
+}
+
+// Manejar formulario - VERSIÓN CORREGIDA
+document.getElementById('formCliente').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Formulario enviado');
+    
+    const formData = new FormData(this);
+    const data = {
+        empresa: formData.get('empresa'),
+        contacto: formData.get('contacto'),
+        telefono: formData.get('telefono'),
+        email: formData.get('email'),
+        direccion: formData.get('direccion')
+    };
+
+    console.log('Datos a enviar:', data);
+
+    if (!data.empresa.trim()) {
+        alert('❌ El nombre de la empresa es requerido');
+        return;
+    }
+
+    try {
+        const url = clienteEditando 
+            ? `/admin/clientes/${clienteEditando.id}/editar`
+            : '/admin/clientes/crear';
+        
+        console.log('URL de destino:', url);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        console.log('Estado de respuesta:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('Respuesta del servidor:', result);
+        
+        if (result.success) {
+            alert(`✅ Cliente ${clienteEditando ? 'actualizado' : 'creado'} correctamente`);
+            // CERRAR MODAL PRIMERO
+            cerrarModalCliente();
+            // LUEGO RECARGAR
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error completo en fetch:', error);
+        alert('❌ Error al guardar cliente: ' + error.message);
+    }
+});
+
+// Cerrar modal al hacer clic fuera - VERSIÓN CORREGIDA
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalCliente');
+    if (event.target === modal) {
+        cerrarModalCliente();
+    }
+});
+</script>
+{% endblock %}

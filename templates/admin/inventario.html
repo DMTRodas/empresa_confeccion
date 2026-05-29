@@ -1,0 +1,1528 @@
+{% extends "base.html" %}
+
+{% block title %}Control de Inventario - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1>📊 Control de Inventario Global</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+            </div>
+        </div>
+        <p class="page-subtitle">Gestión unificada de stock en todas las sedes</p>
+    </div>
+
+    <!-- Resumen de Estados -->
+    <div class="inventory-summary">
+        <div class="summary-card sufficient">
+            <div class="summary-icon">✅</div>
+            <div class="summary-info">
+                <h3>{{ inventario|selectattr('estado', 'equalto', '✅ Suficiente')|list|length }}</h3>
+                <p>Stock Suficiente</p>
+            </div>
+        </div>
+        <div class="summary-card reorder">
+            <div class="summary-icon">⚠️</div>
+            <div class="summary-info">
+                <h3>{{ inventario|selectattr('estado', 'equalto', '⚠️ Reordenar')|list|length }}</h3>
+                <p>Necesita Reorden</p>
+            </div>
+        </div>
+        <div class="summary-card out-of-stock">
+            <div class="summary-icon">❌</div>
+            <div class="summary-info">
+                <h3>{{ inventario|selectattr('estado', 'equalto', '❌ Sin Stock')|list|length }}</h3>
+                <p>Sin Stock</p>
+            </div>
+        </div>
+        <div class="summary-card total">
+            <div class="summary-icon">📦</div>
+            <div class="summary-info">
+                <h3>{{ inventario|length }}</h3>
+                <p>Total Items</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros Avanzados -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3>🔍 Filtros de Inventario</h3>
+            <button class="btn btn-outline btn-sm" onclick="resetearFiltros()">
+                🔄 Limpiar Filtros
+            </button>
+        </div>
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="filtroSede">Sede</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroSede">
+                    <option value="">Todas las sedes</option>
+                    {% for sede in sedes_unique %}
+                    <option value="{{ sede }}">{{ sede }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtroEstado">Estado Stock</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroEstado">
+                    <option value="">Todos los estados</option>
+                    <option value="suficiente">✅ Suficiente</option>
+                    <option value="reordenar">⚠️ Reordenar</option>
+                    <option value="sin_stock">❌ Sin Stock</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtroCategoria">Categoría</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroCategoria">
+                    <option value="">Todas las categorías</option>
+                    {% for categoria in categorias_unique %}
+                    <option value="{{ categoria }}">{{ categoria }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filtroBusqueda">Búsqueda</label>
+                <input type="text" class="filter-select" id="filtroBusqueda" 
+                       placeholder="Buscar producto..." onkeyup="aplicarFiltros()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Inventario -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Inventario por Sede y Producto</h3>
+            <div class="table-actions">
+                <span class="result-count" id="contadorResultados">
+                    Mostrando {{ inventario|length }} registros
+                </span>
+                <button class="btn btn-outline btn-sm" onclick="exportarInventario()">
+                    📊 Exportar Reporte
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table" id="tablaInventario">
+                <thead>
+                    <tr>
+                        <th data-sort="sede">Sede</th>
+                        <th data-sort="producto">Producto</th>
+                        <th data-sort="categoria">Categoría</th>
+                        <th data-sort="disponible">Disponible</th>
+                        <th data-sort="reservado">Reservado</th>
+                        <th data-sort="punto_reorden">Punto Reorden</th>
+                        <th data-sort="precio">Precio USD</th>
+                        <th data-sort="estado">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventario %}
+                    <tr class="inventory-row" 
+                        data-sede="{{ item.sede }}"
+                        data-producto="{{ item.producto|lower }}"
+                        data-categoria="{{ item.categoria }}"
+                        data-estado="{{ item.estado|lower|replace('✅ ', '')|replace('⚠️ ', '')|replace('❌ ', '')|replace(' ', '_') }}"
+                        data-disponible="{{ item.disponible }}"
+                        data-precio="{{ item.precio }}">
+                        <td class="sede-info">
+                            <strong>{{ item.sede }}</strong>
+                        </td>
+                        <td class="product-info">
+                            <div class="product-name">{{ item.producto }}</div>
+                            <div class="product-category">{{ item.categoria }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-category">{{ item.categoria }}</span>
+                        </td>
+                        <td class="stock-available">
+                            <span class="stock-number">{{ item.disponible }}</span>
+                        </td>
+                        <td class="stock-reserved">
+                            <span class="stock-number">{{ item.reservado }}</span>
+                        </td>
+                        <td class="reorder-point">
+                            <span class="stock-number">{{ item.punto_reorden }}</span>
+                        </td>
+                        <td class="product-price">
+                            ${{ "%.2f"|format(item.precio) }}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ item.estado|lower|replace('✅ ', '')|replace('⚠️ ', '')|replace('❌ ', '')|replace(' ', '_') }}">
+                                {{ item.estado }}
+                            </span>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn-action btn-adjust" 
+                                    onclick="ajustarInventario({{ item.id }}, '{{ item.producto }}', {{ item.disponible }})"
+                                    title="Ajustar inventario">
+                                📝
+                            </button>
+                            <button class="btn-action btn-history" 
+                                    onclick="verHistorial({{ item.id }})"
+                                    title="Ver historial">
+                                📋
+                            </button>
+                            <button class="btn-action btn-transfer" 
+                                    onclick="transferirStock({{ item.id }})"
+                                    title="Transferir stock">
+                                🔄
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <div class="empty-content">
+                                <div class="empty-icon">📊</div>
+                                <h4>No hay datos de inventario</h4>
+                                <p>No se encontraron registros de inventario.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ajuste de Inventario -->
+<div id="modalAjuste" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTituloAjuste">Ajustar Inventario</h3>
+            <span class="close" onclick="cerrarModalAjuste()">&times;</span>
+        </div>
+        <form id="formAjuste" class="modal-form">
+            <input type="hidden" id="ajusteInventarioId">
+            
+            <div class="form-group">
+                <label for="ajusteProducto">Producto</label>
+                <input type="text" id="ajusteProducto" readonly class="readonly-input">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="stockActual">Stock Actual</label>
+                    <input type="number" id="stockActual" readonly class="readonly-input">
+                </div>
+                <div class="form-group">
+                    <label for="nuevoStock">Nuevo Stock</label>
+                    <input type="number" id="nuevoStock" name="nuevo_stock" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="motivoAjuste">Motivo del Ajuste</label>
+                <select id="motivoAjuste" name="motivo" required>
+                    <option value="">Seleccionar motivo</option>
+                    <option value="conteo_fisico">Conteo Físico</option>
+                    <option value="danio">Daño o Pérdida</option>
+                    <option value="ajuste_calidad">Ajuste por Calidad</option>
+                    <option value="entrada_manual">Entrada Manual</option>
+                    <option value="otros">Otros</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="observacionesAjuste">Observaciones</label>
+                <textarea id="observacionesAjuste" name="observaciones" rows="3" 
+                          placeholder="Detalles del ajuste..."></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalAjuste()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    💾 Aplicar Ajuste
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para inventario - MATCH CON DASHBOARD */
+.admin-container {
+    padding: 2rem 0;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 2.2rem;
+}
+
+.page-subtitle {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Resumen de Estados - Estilo igual al dashboard */
+.inventory-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.summary-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.summary-card.sufficient { 
+    border-left-color: #27ae60;
+    background: linear-gradient(135deg, #fff, #e8f6f3);
+}
+.summary-card.reorder { 
+    border-left-color: #f39c12;
+    background: linear-gradient(135deg, #fff, #fef9e7);
+}
+.summary-card.out-of-stock { 
+    border-left-color: #e74c3c;
+    background: linear-gradient(135deg, #fff, #fdebd0);
+}
+.summary-card.total { 
+    border-left-color: #3498db;
+    background: linear-gradient(135deg, #fff, #e8f4fd);
+}
+
+.summary-icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.summary-info h3 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.summary-info p {
+    margin: 0.5rem 0 0 0;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+/* Filtros - Estilo consistente */
+.filters-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.filters-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Tabla - Estilo igual al dashboard */
+.table-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.result-count {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s;
+}
+
+.data-table th:hover {
+    background: #e9ecef;
+}
+
+.data-table th[data-sort]::after {
+    content: ' ↕';
+    opacity: 0.5;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+    vertical-align: middle;
+}
+
+/* Estilos específicos de celdas de inventario */
+.sede-info {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.product-info .product-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.product-info .product-category {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.stock-available, .stock-reserved, .reorder-point {
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+.stock-number {
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.stock-available .stock-number {
+    background: #e8f6f3;
+    color: #27ae60;
+    border: 2px solid #27ae60;
+}
+
+.stock-reserved .stock-number {
+    background: #fff3cd;
+    color: #856404;
+    border: 2px solid #f39c12;
+}
+
+.reorder-point .stock-number {
+    background: #e8f4fd;
+    color: #3498db;
+    border: 2px solid #3498db;
+}
+
+.product-price {
+    font-weight: 600;
+    color: #27ae60;
+    font-family: 'Courier New', monospace;
+}
+
+/* Badges y Estados - Consistentes con el sistema */
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-category {
+    background: #e8f4fd;
+    color: #3498db;
+    border: 1px solid #3498db;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-suficiente {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #27ae60;
+}
+
+.status-reordenar {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #f39c12;
+}
+
+.status-sin_stock {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #e74c3c;
+}
+
+/* Botones de Acción - Igual que productos */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.btn-adjust:hover {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.btn-history:hover {
+    background: #9b59b6;
+    color: white;
+    border-color: #9b59b6;
+}
+
+.btn-transfer:hover {
+    background: #f39c12;
+    color: white;
+    border-color: #f39c12;
+}
+
+/* Estados vacíos */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-content {
+    text-align: center;
+    color: #7f8c8d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.empty-content p {
+    margin: 0 0 2rem 0;
+}
+
+/* Input de solo lectura */
+.readonly-input {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Modal - Estilo consistente */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-top: 5px solid #3498db;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.close {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.3s;
+}
+
+.close:hover {
+    color: #e74c3c;
+}
+
+.modal-form {
+    padding: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Botones - Sistema de diseño unificado */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #3498db;
+    color: #3498db;
+}
+
+.btn-outline:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* ESTILOS MEJORADOS PARA HISTORIAL */
+.historial-modal {
+    border-top: 5px solid #9b59b6;
+}
+
+.historial-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1rem 0;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.info-value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.info-count {
+    background: #3498db;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.historial-body {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 0 1rem;
+}
+
+.movimientos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.movimiento-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid #3498db;
+}
+
+.movimiento-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.movimiento-item.transferencia {
+    border-left-color: #f39c12;
+}
+
+.movimiento-item.ajuste {
+    border-left-color: #9b59b6;
+}
+
+.movimiento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.movimiento-tipo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tipo-icono {
+    font-size: 1.2rem;
+}
+
+.tipo-texto {
+    color: #2c3e50;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.movimiento-fecha {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.movimiento-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.movimiento-cantidad .cantidad-numero {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.estado-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.estado-entregado {
+    background: #d4edda;
+    color: #155724;
+}
+
+.estado-pendiente {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.estado-en_transito {
+    background: #cce7ff;
+    color: #004085;
+}
+
+.movimiento-ruta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.ruta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.ruta-icono {
+    font-size: 1rem;
+}
+
+.ruta-texto {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.ruta-flecha {
+    color: #7f8c8d;
+    font-weight: bold;
+    margin: 0 1rem;
+}
+
+.movimiento-meta {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.no-movimientos {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #7f8c8d;
+}
+
+.no-movimientos-icono {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.no-movimientos h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.no-movimientos p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Scrollbar personalizado */
+.historial-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.historial-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.historial-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.historial-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .inventory-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .table-actions {
+        justify-content: space-between;
+    }
+    
+    .data-table {
+        font-size: 0.9rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .summary-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .summary-icon {
+        font-size: 2.5rem;
+    }
+    
+}
+</style>
+
+
+
+<script>
+// Variables globales
+let inventarioEditando = null;
+
+// Funciones de Modal
+function mostrarModalAjuste() {
+    document.getElementById('modalAjuste').style.display = 'block';
+    document.getElementById('modalTituloAjuste').textContent = 'Ajuste Rápido de Inventario';
+    document.getElementById('formAjuste').reset();
+}
+
+function cerrarModalAjuste() {
+    document.getElementById('modalAjuste').style.display = 'none';
+    inventarioEditando = null;
+}
+
+function ajustarInventario(id, producto, stockActual) {
+    inventarioEditando = id;
+    
+    document.getElementById('modalTituloAjuste').textContent = `Ajustar: ${producto}`;
+    document.getElementById('ajusteInventarioId').value = id;
+    document.getElementById('ajusteProducto').value = producto;
+    document.getElementById('stockActual').value = stockActual;
+    document.getElementById('nuevoStock').value = stockActual;
+    document.getElementById('nuevoStock').focus();
+    
+    document.getElementById('modalAjuste').style.display = 'block';
+}
+
+// Funcionalidades REALES
+async function aplicarAjusteInventario(id, datos) {
+    try {
+        const response = await fetch(`/admin/inventario/${id}/ajustar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datos)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Ajuste aplicado correctamente');
+            cerrarModalAjuste();
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error al aplicar ajuste: ' + error.message);
+    }
+}
+
+// Función REAL para transferir stock
+function transferirStock(id) {
+    console.log("Buscando inventario ID:", id);
+    
+    // BUSCAR LA FILA CORRECTA - MÉTODO MEJORADO
+    const filas = document.querySelectorAll('tbody tr');
+    let fila = null;
+    
+    for (let row of filas) {
+        const primeraCelda = row.querySelector('td:first-child');
+        if (primeraCelda && primeraCelda.textContent.includes('#' + id)) {
+            fila = row;
+            break;
+        }
+    }
+    
+    // Si no encuentra por ID, buscar por el botón
+    if (!fila) {
+        filas.forEach(row => {
+            const botones = row.querySelectorAll('.btn-transfer');
+            botones.forEach(boton => {
+                const onclickText = boton.getAttribute('onclick');
+                if (onclickText && onclickText.includes(id)) {
+                    fila = row;
+                }
+            });
+        });
+    }
+    
+    if (!fila) {
+        alert('Error: No se pudo encontrar el producto con ID: ' + id);
+        return;
+    }
+    
+    // OBTENER INFORMACIÓN DE LA FILA - MÉTODO MEJORADO
+    const producto = fila.querySelector('.product-name')?.textContent?.trim() || 'Producto';
+    const sedeActual = fila.querySelector('.sede-info strong')?.textContent?.trim() || 
+                      fila.querySelector('td:nth-child(2)')?.textContent?.trim() || 'Sede';
+    const stockText = fila.querySelector('.stock-available .stock-number')?.textContent ||
+                     fila.querySelector('td:nth-child(4)')?.textContent;
+    const stockActual = parseInt(stockText) || 0;
+    
+    console.log("Datos obtenidos:", { producto, sedeActual, stockActual, id });
+
+    // Validar que haya stock disponible
+    if (stockActual <= 0) {
+        alert('❌ No hay stock disponible para transferir');
+        return;
+    }
+    
+    // OBTENER SEDES ÚNICAS - MÉTODO MEJORADO
+    const sedesUnicas = [];
+    const todasLasFilas = document.querySelectorAll('tbody tr');
+    
+    todasLasFilas.forEach(row => {
+        const sede = row.querySelector('.sede-info strong')?.textContent?.trim() ||
+                    row.querySelector('td:nth-child(2)')?.textContent?.trim();
+        if (sede && sede !== sedeActual && !sedesUnicas.includes(sede)) {
+            sedesUnicas.push(sede);
+        }
+    });
+    
+    console.log("Sedes disponibles para transferir:", sedesUnicas);
+    
+    if (sedesUnicas.length === 0) {
+        alert('❌ No hay otras sedes disponibles para transferir');
+        return;
+    }
+    
+    // [EL RESTO DEL CÓDIGO DEL MODAL SE MANTIENE IGUAL...]
+    // Crear modal de transferencia
+    const modalHTML = `
+        <div id="modalTransferencia" class="modal" style="display: block;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔄 Transferir Stock</h3>
+                    <span class="close" onclick="cerrarModalTransferencia()">&times;</span>
+                </div>
+                <form id="formTransferencia" class="modal-form">
+                    <input type="hidden" id="transferenciaOrigenId" value="${id}">
+                    
+                    <div class="form-group">
+                        <label>Producto</label>
+                        <input type="text" value="${producto}" readonly class="readonly-input">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Sede Origen</label>
+                            <input type="text" value="${sedeActual}" readonly class="readonly-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="sedeDestino">Sede Destino *</label>
+                            <select id="sedeDestino" name="sede_destino" required>
+                                <option value="">Seleccionar sede...</option>
+                                ${sedesUnicas.map(sede => `<option value="${sede}">${sede}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cantidadTransferir">Cantidad a Transferir *</label>
+                            <input type="number" id="cantidadTransferir" 
+                                   min="1" max="${stockActual}" 
+                                   value="1" required>
+                            <small>Stock disponible: ${stockActual}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="motivoTransferencia">Motivo *</label>
+                            <select id="motivoTransferencia" name="motivo" required>
+                                <option value="">Seleccionar motivo...</option>
+                                <option value="redistribucion">Redistribución de Stock</option>
+                                <option value="pedido_especial">Pedido Especial</option>
+                                <option value="stock_seguridad">Stock de Seguridad</option>
+                                <option value="surtido">Surtido de Sede</option>
+                                <option value="otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModalTransferencia()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            🔄 Transferir Stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente si hay uno
+    const modalExistente = document.getElementById('modalTransferencia');
+    if (modalExistente) modalExistente.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarModalTransferencia() {
+    const modal = document.getElementById('modalTransferencia');
+    if (modal) modal.remove();
+}
+
+// Función REAL para ver historial
+async function verHistorial(id) {
+    try {
+        const response = await fetch(`/admin/inventario/${id}/historial`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalHistorial(data.movimientos, data.producto, data.sede);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error al cargar historial: ' + error.message);
+    }
+}
+
+function mostrarModalHistorial(movimientos, producto, sede) {
+    const movimientosHTML = movimientos.length > 0 ? 
+        movimientos.map(mov => `
+            <div class="movimiento-item ${mov.tipo.toLowerCase()}">
+                <div class="movimiento-header">
+                    <div class="movimiento-tipo">
+                        <span class="tipo-icono">${mov.tipo === 'TRANSFERENCIA' ? '🔄' : '📊'}</span>
+                        <strong class="tipo-texto">${mov.tipo}</strong>
+                    </div>
+                    <div class="movimiento-fecha">${mov.fecha}</div>
+                </div>
+                
+                <div class="movimiento-info">
+                    <div class="movimiento-cantidad">
+                        <span class="cantidad-numero">${mov.cantidad} unidades</span>
+                    </div>
+                    <div class="movimiento-estado">
+                        <span class="estado-badge estado-${mov.estado}">${mov.estado}</span>
+                    </div>
+                </div>
+                
+                ${mov.tipo === 'TRANSFERENCIA' ? `
+                <div class="movimiento-ruta">
+                    <div class="ruta-item">
+                        <span class="ruta-icono">📤</span>
+                        <span class="ruta-texto">${mov.sede_origen}</span>
+                    </div>
+                    <div class="ruta-flecha">→</div>
+                    <div class="ruta-item">
+                        <span class="ruta-icono">📥</span>
+                        <span class="ruta-texto">${mov.sede_destino}</span>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="movimiento-meta">
+                    <div class="meta-item">
+                        <span class="meta-icono">👤</span>
+                        <span class="meta-texto">${mov.empleado}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('') :
+        `<div class="no-movimientos">
+            <div class="no-movimientos-icono">📭</div>
+            <h4>No hay movimientos registrados</h4>
+            <p>No se encontraron movimientos para este producto en la sede actual.</p>
+        </div>`;
+    
+    const modalHTML = `
+        <div id="modalHistorial" class="modal" style="display: block;">
+            <div class="modal-content historial-modal" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3>📋 Historial de Movimientos</h3>
+                    <span class="close" onclick="cerrarModalHistorial()">&times;</span>
+                </div>
+                
+                <div class="modal-subheader">
+                    <div class="historial-info">
+                        <div class="info-item">
+                            <span class="info-label">Producto:</span>
+                            <span class="info-value">${producto}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Sede:</span>
+                            <span class="info-value">${sede}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Total movimientos:</span>
+                            <span class="info-count">${movimientos.length}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-body historial-body">
+                    <div class="movimientos-list">
+                        ${movimientosHTML}
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="cerrarModalHistorial()">
+                        ✕ Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente si hay uno
+    const modalExistente = document.getElementById('modalHistorial');
+    if (modalExistente) modalExistente.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarModalHistorial() {
+    const modal = document.getElementById('modalHistorial');
+    if (modal) modal.remove();
+}
+
+// Filtros
+function aplicarFiltros() {
+    const sede = document.getElementById('filtroSede').value;
+    const estado = document.getElementById('filtroEstado').value;
+    const categoria = document.getElementById('filtroCategoria').value;
+    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase();
+    
+    const filas = document.querySelectorAll('.inventory-row');
+    let visibleCount = 0;
+    
+    filas.forEach(fila => {
+        let mostrar = true;
+        
+        if (sede && fila.dataset.sede !== sede) {
+            mostrar = false;
+        }
+        
+        if (estado && fila.dataset.estado !== estado) {
+            mostrar = false;
+        }
+        
+        if (categoria && fila.dataset.categoria !== categoria) {
+            mostrar = false;
+        }
+        
+        if (busqueda && !fila.dataset.producto.includes(busqueda)) {
+            mostrar = false;
+        }
+        
+        fila.style.display = mostrar ? '' : 'none';
+        if (mostrar) visibleCount++;
+    });
+    
+    document.getElementById('contadorResultados').textContent = 
+        `Mostrando ${visibleCount} de ${filas.length} registros`;
+}
+
+function resetearFiltros() {
+    document.getElementById('filtroSede').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('filtroBusqueda').value = '';
+    aplicarFiltros();
+}
+
+function exportarInventario() {
+    alert('📊 Exportando reporte de inventario - Funcionalidad próximamente');
+}
+
+// Manejar envío del formulario de ajuste
+document.getElementById('formAjuste').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const datos = {
+        nuevo_stock: parseInt(formData.get('nuevo_stock')),
+        motivo: formData.get('motivo'),
+        observaciones: formData.get('observaciones')
+    };
+    
+    if (datos.nuevo_stock < 0) {
+        alert('❌ El stock no puede ser negativo');
+        return;
+    }
+    
+    await aplicarAjusteInventario(inventarioEditando, datos);
+});
+
+// Cerrar modal al hacer clic fuera
+window.onclick = function(event) {
+    const modal = document.getElementById('modalAjuste');
+    if (event.target === modal) {
+        cerrarModalAjuste();
+    }
+}
+
+// Manejar envío del formulario de transferencia
+document.addEventListener('submit', async function(e) {
+    if (e.target.id === 'formTransferencia') {
+        e.preventDefault();
+        
+        const datos = {
+            origen_id: parseInt(document.getElementById('transferenciaOrigenId').value),
+            sede_destino: document.getElementById('sedeDestino').value,
+            cantidad: parseInt(document.getElementById('cantidadTransferir').value),
+            motivo: document.getElementById('motivoTransferencia').value
+        };
+        
+        // Validaciones
+        if (datos.cantidad <= 0) {
+            alert('❌ La cantidad debe ser mayor a 0');
+            return;
+        }
+        
+        if (!datos.sede_destino) {
+            alert('❌ Debes seleccionar una sede destino');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/admin/inventario/transferir', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(datos)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('✅ ' + result.message);
+                cerrarModalTransferencia();
+                location.reload(); // Recargar para ver los cambios
+            } else {
+                alert('❌ Error: ' + result.error);
+            }
+        } catch (error) {
+            alert('❌ Error en transferencia: ' + error.message);
+        }
+    }
+});
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    aplicarFiltros();
+});
+</script>
+{% endblock %}

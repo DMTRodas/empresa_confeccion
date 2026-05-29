@@ -1,0 +1,948 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Órdenes - Admin{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="header-content">
+        <div>
+            <h1>📋 Gestión de Órdenes</h1>
+            <p class="user-info">Administra y realiza seguimiento de todas las órdenes del sistema</p>
+        </div>
+         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>
+            <h2>Todas las Órdenes</h2>
+            <div class="order-stats">
+                <span class="stat-badge total">{{ ordenes|length }} total</span>
+                <span class="stat-badge pending">{{ ordenes|selectattr('estado', 'in', ['pendiente', 'confirmada', 'en_produccion'])|list|length }} activas</span>
+                <span class="stat-badge completed">{{ ordenes|selectattr('estado', 'equalto', 'completada')|list|length }} completadas</span>
+                <span class="stat-badge canceled">{{ ordenes|selectattr('estado', 'equalto', 'cancelada')|list|length }} canceladas</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Cliente</th>
+                    <th>Productos</th>
+                    <th>Cant. Total</th>
+                    <th>Total</th>
+                    <th>Sede</th>
+                    <th>Fecha Creación</th>
+                    <th>Fecha Estimada</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for orden in ordenes %}
+                <tr class="order-row {% if orden.estado == 'cancelada' %}cancelada{% endif %}">
+                    <td>
+                        <strong>#{{ orden.id }}</strong>
+                        {% if orden.estado == 'cancelada' %}
+                        <div class="canceled-badge">Cancelada</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="order-type order-type-{{ orden.tipo|lower }}">
+                            {{ orden.tipo }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ orden.estado }}">
+                            {{ orden.estado|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="client-info">
+                            <strong>{{ orden.cliente }}</strong>
+                            {% if orden.responsable and orden.responsable != 'N/A' %}
+                            <small>Por: {{ orden.responsable }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="products-info">
+                            <span class="products-count">{{ orden.cantidad_productos }} producto(s)</span>
+                            <div class="products-list">{{ orden.productos }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="quantity">{{ orden.cantidad_total }}</span>
+                    </td>
+                    <td>
+                        <strong class="price">${{ "%.2f"|format(orden.total) }}</strong>
+                    </td>
+                    <td>
+                        {{ orden.sede }}
+                    </td>
+                    <td>
+                        <div class="date-info">
+                            {{ orden.fecha_creacion.strftime('%d/%m/%Y') }}
+                            <small>{{ orden.fecha_creacion.strftime('%H:%M') }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if orden.fecha_estimada and orden.fecha_estimada != 'N/A' %}
+                        <div class="date-info {% if orden.estado not in ['completada', 'cancelada'] %}estimated-date{% endif %}">
+                            {{ orden.fecha_estimada.strftime('%d/%m/%Y') }}
+                            {% if orden.estado not in ['completada', 'cancelada'] %}
+                            <small class="days-remaining">
+                                {% set dias = (orden.fecha_estimada - now().date()).days %}
+                                {% if dias > 0 %}
+                                (en {{ dias }} días)
+                                {% elif dias == 0 %}
+                                (hoy)
+                                {% else %}
+                                (vencido)
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="no-date">Por definir</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-info" 
+                                    onclick="verOrden({{ orden.id }})"
+                                    title="Ver detalles completos">
+                                👁️ Detalles
+                            </button>
+                            {% if orden.estado != 'cancelada' and orden.estado != 'completada' %}
+                            <button class="btn btn-sm btn-warning" 
+                                    onclick="actualizarEstado({{ orden.id }}, '{{ orden.estado }}')"
+                                    title="Cambiar estado de la orden">
+                                🔄 Estado
+                            </button>
+                            {% endif %}
+                            {% if orden.estado == 'pendiente' %}
+                            <button class="btn btn-sm btn-danger" 
+                                    onclick="cancelarOrden({{ orden.id }})"
+                                    title="Cancelar esta orden">
+                                ❌ Cancelar
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="11" class="no-orders">
+                        <div class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <h3>No hay órdenes registradas</h3>
+                            <p>Cuando los clientes realicen pedidos, aparecerán aquí.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card">
+    <div class="section-header">
+        <h2>🔍 Filtros y Búsqueda</h2>
+    </div>
+    <form method="GET" action="{{ url_for('admin_ordenes') }}" class="filters-container">
+        <div class="filter-group">
+            <label>Tipo de Orden:</label>
+            <select name="tipo" class="filter-select" onchange="this.form.submit()">
+                <option value="">Todos los tipos</option>
+                <option value="VENTA" {% if tipo_filter == 'VENTA' %}selected{% endif %}>Ventas</option>
+                <option value="PRODUCCION" {% if tipo_filter == 'PRODUCCION' %}selected{% endif %}>Producción</option>
+                <option value="TRASLADO" {% if tipo_filter == 'TRASLADO' %}selected{% endif %}>Traslados</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Estado:</label>
+            <select name="estado" class="filter-select" onchange="this.form.submit()">
+                <option value="">Todos los estados</option>
+                <option value="pendiente" {% if estado_filter == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="confirmada" {% if estado_filter == 'confirmada' %}selected{% endif %}>Confirmada</option>
+                <option value="en_produccion" {% if estado_filter == 'en_produccion' %}selected{% endif %}>En Producción</option>
+                <option value="completada" {% if estado_filter == 'completada' %}selected{% endif %}>Completada</option>
+                <option value="cancelada" {% if estado_filter == 'cancelada' %}selected{% endif %}>Cancelada</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Buscar:</label>
+            <input type="text" name="search" class="search-input" 
+                   placeholder="ID, cliente o producto..." 
+                   value="{{ search_filter }}"
+                   onkeyup="if(event.keyCode === 13) this.form.submit()">
+        </div>
+        
+        <div class="filter-group">
+            <button type="submit" class="btn btn-primary">
+                🔍 Aplicar Filtros
+            </button>
+            <a href="{{ url_for('admin_ordenes') }}" class="btn btn-secondary">
+                🔄 Limpiar
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+
+    /* Estilo para el botón de volver */
+.btn-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-dashboard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+    background: linear-gradient(135deg, #5a6268 0%, #3d4348 100%);
+    color: white;
+    text-decoration: none;
+}
+
+/* O si prefieres usar la clase btn-secondary existente */
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #6c757d;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 2px solid #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    border-color: #545b62;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+/* Estilos mejorados */
+.dashboard-header {
+    background: linear-gradient(135deg, #2c3e50 0%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.user-info {
+    margin: 0.5rem 0 0 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.order-stats {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.stat-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 2px solid transparent;
+}
+
+.stat-badge.total { background: #e8f4fd; color: #3498db; border-color: #3498db; }
+.stat-badge.pending { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.stat-badge.completed { background: #d4edda; color: #155724; border-color: #28a745; }
+.stat-badge.canceled { background: #f8d7da; color: #721c24; border-color: #dc3545; }
+
+/* Tabla moderna */
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.modern-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+
+.order-row:hover {
+    background: #f8f9fa;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.order-row.cancelada {
+    background: #f8f9fa;
+    opacity: 0.7;
+}
+
+.order-row.cancelada td {
+    color: #6c757d;
+}
+
+.canceled-badge {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: inline-block;
+}
+
+/* Tipos de orden */
+.order-type {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.order-type-venta { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.order-type-produccion { background: #cce7ff; color: #004085; border: 1px solid #b3d7ff; }
+.order-type-traslado { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+
+/* Estados mejorados */
+.status-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    display: inline-block;
+    min-width: 120px;
+    text-align: center;
+    border: 2px solid transparent;
+}
+
+.status-pendiente { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.status-confirmada { background: #d1ecf1; color: #0c5460; border-color: #17a2b8; }
+.status-en_produccion { background: #cce7ff; color: #004085; border-color: #007bff; }
+.status-completada { background: #d4edda; color: #155724; border-color: #28a745; }
+.status-cancelada { background: #f8d7da; color: #721c24; border-color: #dc3545; }
+
+/* Información de cliente */
+.client-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.client-info strong {
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.client-info small {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+/* Información de productos */
+.products-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.products-count {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.products-list {
+    font-size: 0.875rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* Cantidad y precios */
+.quantity {
+    background: #e8f4fd;
+    color: #3498db;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 500;
+    text-align: center;
+    display: inline-block;
+}
+
+.price {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Fechas */
+.date-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.date-info small {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.estimated-date {
+    background: #fff3cd;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border-left: 3px solid #ffc107;
+}
+
+.days-remaining {
+    color: #856404 !important;
+    font-weight: 500;
+}
+
+.no-date {
+    color: #6c757d;
+    font-style: italic;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* Botones de acción */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 140px;
+}
+
+.action-buttons .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Estado vacío */
+.no-orders {
+    text-align: center;
+    padding: 3rem !important;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Filtros */
+.filters-container {
+    display: flex;
+    gap: 1.5rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 150px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.filter-select, .search-input {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+}
+
+.filter-select:focus, .search-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .modern-table {
+        font-size: 0.875rem;
+    }
+    
+    .modern-table th,
+    .modern-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filters-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        min-width: auto;
+    }
+    
+    .action-buttons {
+        min-width: 120px;
+    }
+}
+</style>
+
+<script>
+// Función para ver detalles de la orden
+async function verOrden(ordenId) {
+    try {
+        const response = await fetch(`/api/ordenes/${ordenId}/detalles`);
+        const detalles = await response.json();
+        
+        if (response.ok) {
+            mostrarModalDetalles(ordenId, detalles);
+        } else {
+            alert('Error al cargar detalles: ' + detalles.error);
+        }
+    } catch (error) {
+        alert('Error de conexión: ' + error.message);
+    }
+}
+
+// Función para actualizar estado (MEJORADA)
+function actualizarEstado(ordenId, estadoActual) {
+    const estados = {
+        'pendiente': [
+            { value: 'confirmada', name: 'Confirmada', description: 'El pedido ha sido confirmado y está listo para producción' },
+            { value: 'cancelada', name: 'Cancelada', description: 'Cancelar el pedido' }
+        ],
+        'confirmada': [
+            { value: 'en_produccion', name: 'En Producción', description: 'El pedido está siendo fabricado' },
+            { value: 'pendiente', name: 'Pendiente', description: 'Revertir a pendiente' }
+        ],
+        'en_produccion': [
+            { value: 'completada', name: 'Completada', description: 'El pedido ha sido terminado y está listo' },
+            { value: 'confirmada', name: 'Confirmada', description: 'Revertir a confirmada' }
+        ]
+    };
+    
+    // Verificar stock si el nuevo estado sería "confirmada"
+    const opciones = estados[estadoActual] || [];
+    const opcionConfirmar = opciones.find(op => op.value === 'confirmada');
+    
+    if (opcionConfirmar) {
+        // Verificar stock antes de mostrar el modal
+        fetch(`/admin/ordenes/${ordenId}/verificar-stock`)
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    // Mostrar advertencia de stock insuficiente
+                    opcionConfirmar.description += ` ⚠️ ${result.message}`;
+                    opcionConfirmar.warning = true;
+                }
+                mostrarModalEstadoContenido(ordenId, estadoActual, opciones);
+            })
+            .catch(error => {
+                console.error('Error verificando stock:', error);
+                mostrarModalEstadoContenido(ordenId, estadoActual, opciones);
+            });
+    } else {
+        mostrarModalEstadoContenido(ordenId, estadoActual, opciones);
+    }
+}
+
+// Función auxiliar para mostrar el modal
+function mostrarModalEstadoContenido(ordenId, estadoActual, opciones) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            <h3>Cambiar Estado - Orden #${ordenId}</h3>
+            <p>Estado actual: <span class="status-badge status-${estadoActual}">${estadoActual.replace('_', ' ')}</span></p>
+            
+            <div class="state-options">
+                ${opciones.map(opcion => `
+                    <div class="state-option ${opcion.warning ? 'state-warning' : ''}" 
+                         onclick="seleccionarEstado(this, '${opcion.value}')">
+                        <div class="state-info">
+                            <div>
+                                <div class="state-name">${opcion.name}</div>
+                                <div class="state-description">${opcion.description}</div>
+                            </div>
+                            <span class="status-badge status-${opcion.value}">${opcion.value.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="confirmarCambioEstado(${ordenId})" disabled id="confirmBtn">
+                    Confirmar Cambio
+                </button>
+                <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    window.selectedEstado = null;
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Función para cancelar orden (admin)
+async function cancelarOrden(ordenId) {
+    if (!confirm('¿Estás seguro de que deseas cancelar esta orden?\n\nEsta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/ordenes/${ordenId}/cancelar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Orden cancelada correctamente');
+            window.location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error de conexión: ' + error.message);
+    }
+}
+
+// Modal para detalles
+function mostrarModalDetalles(ordenId, detalles) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            <h3>Detalles de Orden #${ordenId}</h3>
+            <div class="order-details">
+                <h4>Productos:</h4>
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detalles.map(item => `
+                            <tr>
+                                <td>${item.producto}</td>
+                                <td>${item.cantidad} ${item.unidad}</td>
+                                <td>$${item.precio_unitario.toFixed(2)}</td>
+                                <td>$${item.subtotal.toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-weight: bold;">Total:</td>
+                            <td style="font-weight: bold;">$${detalles.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    
+    // Cerrar modal al hacer click fuera
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Modal para cambiar estado
+function mostrarModalEstado(ordenId, estadoActual, opciones) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            <h3>Cambiar Estado - Orden #${ordenId}</h3>
+            <p>Estado actual: <span class="status-badge status-${estadoActual}">${estadoActual.replace('_', ' ')}</span></p>
+            
+            <div class="state-options">
+                ${opciones.map(opcion => `
+                    <div class="state-option" onclick="seleccionarEstado(this, '${opcion.value}')">
+                        <div class="state-info">
+                            <div>
+                                <div class="state-name">${opcion.name}</div>
+                                <div class="state-description">${opcion.description}</div>
+                            </div>
+                            <span class="status-badge status-${opcion.value}">${opcion.value.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="confirmarCambioEstado(${ordenId})" disabled id="confirmBtn">
+                    Confirmar Cambio
+                </button>
+                <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    window.selectedEstado = null;
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+function seleccionarEstado(element, estado) {
+    // Remover selección anterior
+    document.querySelectorAll('.state-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Seleccionar nuevo
+    element.classList.add('selected');
+    window.selectedEstado = estado;
+    
+    // Habilitar botón de confirmar
+    document.getElementById('confirmBtn').disabled = false;
+}
+
+async function confirmarCambioEstado(ordenId) {
+    if (!window.selectedEstado) return;
+    
+    try {
+        const response = await fetch(`/admin/ordenes/${ordenId}/actualizar-estado`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ estado: window.selectedEstado })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Estado actualizado correctamente');
+            window.location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error de conexión: ' + error.message);
+    }
+}
+
+// Cerrar modales con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.remove();
+        });
+    }
+});
+</script>
+
+<!-- Estilos para modales -->
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.state-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+}
+
+.state-option {
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.state-option:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+}
+
+.state-option.selected {
+    border-color: #3498db;
+    background: #e8f4fd;
+}
+
+.state-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.state-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.state-description {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Portal Empleado - Confecciones La Elegante{% endblock %}
+
+{% block content %}
+<!-- Header del Empleado -->
+<div style="background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); color: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: between; align-items: center; flex-wrap: wrap;">
+        <div>
+            <h1 style="margin: 0; font-size: 2rem;">👨‍💼 Portal del Empleado</h1>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">
+                {{ session.user_nombre }} - {{ session.user_puesto }} | Sede: {{ session.user_sede }}
+            </p>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 5px;">
+            <small>🟢  En línea</small>
+        </div>
+    </div>
+</div>
+
+<!-- Tarjetas de Acción -->
+<div class="card-grid">
+    <div class="card" style="text-align: center; border-left: 4px solid #3498db;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+        <h3 style="color: #2c3e50;">Mis Tareas</h3>
+        <p style="color: #666;">Gestiona tus asignaciones de producción diarias</p>
+        <button class="btn btn-primary" onclick="verTareas()" style="width: 100%;">
+            👀 Ver Tareas Asignadas
+        </button>
+    </div>
+    
+    <div class="card" style="text-align: center; border-left: 4px solid #27ae60;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+        <h3 style="color: #2c3e50;">Control de Inventario</h3>
+        <p style="color: #666;">Gestiona el stock y existencias de tu sede</p>
+        <button class="btn btn-success" onclick="gestionarInventario()" style="width: 100%;">
+            📊 Gestionar Inventario
+        </button>
+    </div>
+    
+    <div class="card" style="text-align: center; border-left: 4px solid #9b59b6;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🏭</div>
+        <h3 style="color: #2c3e50;">Órdenes de Producción</h3>
+        <p style="color: #666;">Ver y actualizar estado de órdenes activas</p>
+        <button class="btn btn-primary" onclick="verOrdenes()" style="width: 100%;">
+            📋 Ver Órdenes Activas
+        </button>
+    </div>
+    
+    <div class="card" style="text-align: center; border-left: 4px solid #e74c3c;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+        <h3 style="color: #2c3e50;">Reportes Diarios</h3>
+        <p style="color: #666;">Genera reportes de producción y avances</p>
+        <button class="btn btn-success" onclick="generarReporte()" style="width: 100%;">
+            📈 Generar Reporte
+        </button>
+    </div>
+</div>
+
+<!-- Tareas Pendientes -->
+<div class="card">
+    <h2>⏰ Tareas pendientes para hoy</h2>
+    <div style="background: #fff3cd; padding: 1.5rem; border-radius: 5px; margin: 1rem 0;">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <div style="background: #e74c3c; color: white; padding: 0.5rem; border-radius: 50%; margin-right: 1rem;">!</div>
+            <div>
+                <h4 style="margin: 0; color: #856404;">No olvides completar estas tareas</h4>
+                <p style="margin: 0; color: #856404;">Estamos trabajando en las funcionalidades específicas para tu puesto.</p>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="background: white; padding: 1rem; border-radius: 5px; border-left: 4px solid #3498db;">
+                <h5 style="margin: 0 0 0.5rem 0;">📦 Revisar Inventario</h5>
+                <p style="margin: 0; font-size: 0.9rem; color: #666;">Verificar stock de materia prima</p>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 5px; border-left: 4px solid #27ae60;">
+                <h5 style="margin: 0 0 0.5rem 0;">🏭 Actualizar Producción</h5>
+                <p style="margin: 0; font-size: 0.9rem; color: #666;">Reportar avances de órdenes</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function verTareas() {
+    alert('📋 Funcionalidad de Tareas - Próximamente podrás ver tus tareas asignadas y reportar avances.');
+}
+
+function gestionarInventario() {
+    alert('📊 Funcionalidad de Inventario - Próximamente podrás gestionar el stock de tu sede.');
+}
+
+function verOrdenes() {
+    alert('🏭 Funcionalidad de Órdenes - Próximamente podrás ver y actualizar órdenes de producción.');
+}
+
+function generarReporte() {
+    alert('📈 Funcionalidad de Reportes - Próximamente podrás generar reportes diarios de producción.');
+}
+</script>
+{% endblock %}

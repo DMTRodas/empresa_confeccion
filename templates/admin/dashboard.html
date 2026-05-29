@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Administrador - Confecciones Gradiante{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <!-- Header del Dashboard -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h1><strong> Dashboard Administrador </strong></h1>
+            <div class="user-info">
+                <span class="welcome">Bienvenido, <strong>{{ session.user_nombre }}</strong></span>
+                <span class="sede">Sede: {{ session.user_sede }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card primary">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+                <h2>{{ stats.total_productos or 0 }}</h2>
+                <p>Productos Totales</p>
+            </div>
+        </div>
+
+        <div class="stat-card success">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <h2>{{ stats.total_clientes or 0 }}</h2>
+                <p>Clientes Activos</p>
+            </div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-icon">👨‍💼</div>
+            <div class="stat-info">
+                <h2>{{ stats.total_empleados or 0 }}</h2>
+                <p>Empleados</p>
+            </div>
+        </div>
+
+        <div class="stat-card info">
+            <div class="stat-icon">🏭</div>
+            <div class="stat-info">
+                <h2>{{ stats.total_sedes or 0 }}</h2>
+                <p>Sedes</p>
+            </div>
+        </div>
+
+        <div class="stat-card danger">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+                <h2>{{ stats.ordenes_activas or 0 }}</h2>
+                <p>Órdenes Activas</p>
+            </div>
+        </div>
+
+        <div class="stat-card dark">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+                <h2>${{ "%.2f"|format(stats.valor_inventario or 0) }}</h2>
+                <p>Valor Inventario</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Acciones Rápidas -->
+    <div class="actions-section">
+        <h2>Apartados de control</h2>
+        <div class="actions-grid">
+            <a href="{{ url_for('admin_productos') }}" class="action-card">
+                <div class="action-icon">📦</div>
+                <h3>Gestionar Productos</h3>
+                <p>Administrar catálogo y precios</p>
+            </a>
+
+            <a href="{{ url_for('admin_clientes') }}" class="action-card">
+                <div class="action-icon">👥</div>
+                <h3>Gestionar Clientes</h3>
+                <p>Administrar base de clientes</p>
+            </a>
+
+            <a href="{{ url_for('admin_sedes') }}" class="action-card">
+                <div class="action-icon">🏭</div>
+                <h3>Gestionar Sedes</h3>
+                <p>Administrar sedes y ubicaciones</p>
+            </a>
+
+            <a href="{{ url_for('admin_inventario') }}" class="action-card">
+                <div class="action-icon">📊</div>
+                <h3>Control de Inventario</h3>
+                <p>Gestión de stock global</p>
+            </a>
+
+            <a href="{{ url_for('admin_ordenes') }}" class="action-card">
+                <div class="action-icon">📋</div>
+                <h3>Gestión de Órdenes</h3>
+                <p>Ver y administrar órdenes</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Órdenes Recientes -->
+    <div class="recent-orders">
+        <div class="section-header">
+            <h3>📋 Órdenes Recientes</h3>
+            <a href="{{ url_for('admin_ordenes') }}" class="view-all">Ver todas →</a>
+        </div>
+        
+        <div class="orders-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Cliente</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orden in ordenes_recientes %}
+                    <tr>
+                        <td class="order-id">#{{ orden.id }}</td>
+                        <td>
+                            <span class="badge tipo-{{ orden.tipo|lower }}">
+                                {{ orden.tipo }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ orden.estado }}">
+                                {{ orden.estado }}
+                            </span>
+                        </td>
+                        <td class="cliente">{{ orden.cliente or 'N/A' }}</td>
+                        <td class="producto">{{ orden.producto }}</td>
+                        <td class="cantidad">{{ orden.cantidad }}</td>
+                        <td class="fecha">{{ orden.fecha.strftime('%d/%m/%Y') if orden.fecha else '' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="no-orders">
+                            📝 No hay órdenes recientes
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Gráficos/Estadísticas Visuales -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <h3>📈 Resumen de Estados</h3>
+            <div class="mini-stats">
+                <div class="mini-stat">
+                    <span class="dot completed"></span>
+                    <span>Completadas: {{ (ordenes_recientes|selectattr('estado', 'equalto', 'completada')|list|length) or 0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="dot in-progress"></span>
+                    <span>En Producción: {{ (ordenes_recientes|selectattr('estado', 'equalto', 'en_produccion')|list|length) or 0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="dot pending"></span>
+                    <span>Pendientes: {{ (ordenes_recientes|selectattr('estado', 'equalto', 'pendiente')|list|length) or 0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    padding: 0;
+}
+
+/* Header del Dashboard */
+.dashboard-header {
+    background: linear-gradient(135deg, #13202cff, #08335eff);
+    color: white;
+    padding: 2rem 2rem;
+    margin-bottom: 2rem;
+    border-radius: 0px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.dashboard-header h2 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 300;
+}
+
+.user-info {
+    text-align: center;
+}
+
+.welcome {
+    display: block;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.sede {
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+/* Grid de Estadísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.stat-card.primary { border-left-color: #3498db; }
+.stat-card.success { border-left-color: #27ae60; }
+.stat-card.warning { border-left-color: #f39c12; }
+.stat-card.info { border-left-color: #9b59b6; }
+.stat-card.danger { border-left-color: #e74c3c; }
+.stat-card.dark { border-left-color: #2c3e50; }
+
+.stat-icon {
+    font-size: 3rem;
+    opacity: 0.8;
+}
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-info p {
+    margin: 0.5rem 0 0 0;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+/* Acciones Rápidas */
+.actions-section {
+    margin-bottom: 3rem;
+}
+
+.actions-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.action-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.action-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border-color: #3498db;
+}
+
+.action-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.action-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.3rem;
+}
+
+.action-card p {
+    margin: 0;
+    color: #7f8c8d;
+    line-height: 1.5;
+}
+
+/* Órdenes Recientes */
+.recent-orders {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.8rem;
+}
+
+.view-all {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.view-all:hover {
+    color: #2980b9;
+}
+
+.orders-table {
+    overflow-x: auto;
+}
+
+.orders-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.orders-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.orders-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.order-id {
+    font-weight: 600;
+    color: #3498db;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tipo-venta { background: #d4edda; color: #155724; }
+.tipo-produccion { background: #e2e3e5; color: #383d41; }
+.tipo-traslado { background: #fff3cd; color: #856404; }
+
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-completada { background: #d4edda; color: #155724; }
+.status-en_produccion { background: #cce7ff; color: #004085; }
+.status-confirmada { background: #fff3cd; color: #856404; }
+.status-pendiente { background: #f8d7da; color: #721c24; }
+
+.no-orders {
+    text-align: center;
+    padding: 3rem;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* Gráficos/Estadísticas */
+.charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.chart-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.chart-card h3 {
+    margin: 0 0 1.5rem 0;
+    color: #2c3e50;
+}
+
+.mini-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mini-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot.completed { background: #27ae60; }
+.dot.in-progress { background: #3498db; }
+.dot.pending { background: #e74c3c; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .user-info {
+        text-align: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .orders-table {
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,1047 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Productos - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1>📦 Gestión de Productos</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+                <button class="btn btn-primary" onclick="mostrarModalProducto()">
+                    ➕ Agregar Producto
+                </button>
+            </div>
+        </div>
+        <p class="page-subtitle"> Administra el catálogo completo de productos y materias primas</p>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="quick-stats">
+        <div class="stat-item">
+            <span class="stat-number">{{ productos|length }}</span>
+            <span class="stat-label">Total Productos</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ productos|selectattr('es_materia_prima', 'equalto', 'Sí')|list|length }}</span>
+            <span class="stat-label">Materias Primas</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ productos|selectattr('activo', 'equalto', '✅')|list|length }}</span>
+            <span class="stat-label">Activos</span>
+        </div>
+    </div>
+
+    <!-- Filtros Avanzados -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3>🔍 Filtros Avanzados</h3>
+            <button class="btn btn-outline btn-sm" onclick="resetearFiltros()">
+                🔄 Limpiar Filtros
+            </button>
+        </div>
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="filtroCategoria">Categoría</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroCategoria">
+                    <option value="">Todas las categorías</option>
+                    <option value="Producto Final">Producto Final</option>
+                    <option value="Materia Prima">Materia Prima</option>
+                    <option value="Insumos">Insumos</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtroTipo">Tipo de Producto</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroTipo">
+                    <option value="">Todos los tipos</option>
+                    <option value="materia_prima">Materia Prima</option>
+                    <option value="producto_terminado">Producto Terminado</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtroEstado">Estado</label>
+                <select class="filter-select" onchange="aplicarFiltros()" id="filtroEstado">
+                    <option value="">Todos los estados</option>
+                    <option value="activo">Activos</option>
+                    <option value="inactivo">Inactivos</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filtroBusqueda">Búsqueda</label>
+                <input type="text" class="filter-select" id="filtroBusqueda" 
+                       placeholder="Buscar por nombre..." onkeyup="aplicarFiltros()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Productos -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Lista de Productos</h3>
+            <div class="table-actions">
+                <span class="result-count" id="contadorResultados">
+                    Mostrando {{ productos|length }} productos
+                </span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table" id="tablaProductos">
+                <thead>
+                    <tr>
+                        <th data-sort="id">ID</th>
+                        <th data-sort="nombre">Producto</th>
+                        <th data-sort="categoria">Categoría</th>
+                        <th data-sort="precio">Precio USD</th>
+                        <th data-sort="tipo">Tipo</th>
+                        <th data-sort="unidad">Unidad</th>
+                        <th data-sort="estado">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr class="product-row" 
+                        data-id="{{ producto.id }}"
+                        data-nombre="{{ producto.nombre|lower }}"
+                        data-categoria="{{ producto.categoria }}"
+                        data-tipo="{{ 'materia_prima' if producto.es_materia_prima == 'Sí' else 'producto_terminado' }}"
+                        data-estado="{{ 'activo' if producto.activo == '✅' else 'inactivo' }}"
+                        data-precio="{{ producto.precio }}">
+                        <td class="product-id">#{{ producto.id }}</td>
+                        <td class="product-info">
+                            <div class="product-name">{{ producto.nombre }}</div>
+                            {% if producto.descripcion %}
+                            <div class="product-description">{{ producto.descripcion }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-category">{{ producto.categoria }}</span>
+                        </td>
+                        <td class="product-price">
+                            ${{ "%.2f"|format(producto.precio) }}
+                        </td>
+                        <td>
+                            <span class="badge {{ 'badge-materia' if producto.es_materia_prima == 'Sí' else 'badge-producto' }}">
+                                {{ 'Materia Prima' if producto.es_materia_prima == 'Sí' else 'Producto' }}
+                            </span>
+                        </td>
+                        <td class="product-unit">{{ producto.unidad }}</td>
+                        <td>
+                            <span class="status-badge {{ 'status-active' if producto.activo == '✅' else 'status-inactive' }}">
+                                {{ producto.activo }}
+                            </span>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn-action btn-edit" onclick="editarProducto({{ producto.id }})" 
+                                    title="Editar producto">
+                                ✏️
+                            </button>
+                            <button class="btn-action btn-inventory" onclick="verInventario({{ producto.id }})"
+                                    title="Ver inventario">
+                                📊
+                            </button>
+                            <button class="btn-action btn-delete" onclick="eliminarProducto({{ producto.id }})"
+                                    title="Eliminar producto">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-content">
+                                <div class="empty-icon">📦</div>
+                                <h4>No hay productos registrados</h4>
+                                <p>Comienza agregando tu primer producto al catálogo.</p>
+                                <button class="btn btn-primary" onclick="mostrarModalProducto()">
+                                    ➕ Agregar Primer Producto
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación (para futura implementación) -->
+        <div class="table-footer">
+            <div class="pagination">
+                <button class="btn btn-outline btn-sm" disabled>← Anterior</button>
+                <span class="page-info">Página 1 de 1</span>
+                <button class="btn btn-outline btn-sm" disabled>Siguiente →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Agregar/Editar Producto -->
+<div id="modalProducto" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitulo">Agregar Nuevo Producto</h3>
+            <span class="close" onclick="cerrarModalProducto()">&times;</span>
+        </div>
+        <form id="formProducto" class="modal-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="productoNombre">Nombre del Producto *</label>
+                    <input type="text" id="productoNombre" name="nombre" required 
+                           placeholder="Ej: Camiseta Básica Algodón">
+                </div>
+                <div class="form-group">
+                    <label for="productoCategoria">Categoría *</label>
+                    <select id="productoCategoria" name="categoria" required>
+                        <option value="">Seleccionar categoría</option>
+                        <option value="Producto Final">Producto Final</option>
+                        <option value="Materia Prima">Materia Prima</option>
+                        <option value="Insumos">Insumos</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="productoDescripcion">Descripción</label>
+                <textarea id="productoDescripcion" name="descripcion" rows="3" 
+                          placeholder="Descripción detallada del producto..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="productoPrecio">Precio (USD) *</label>
+                    <input type="number" id="productoPrecio" name="precio" step="0.01" min="0" 
+                           required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="productoUnidad">Unidad de Medida *</label>
+                    <input type="text" id="productoUnidad" name="unidad" required 
+                           placeholder="pz, kg, m, rollo, etc.">
+                </div>
+            </div>
+
+            <div class="form-group">
+                    <label for="sede_inicial">Sede Inicial:</label>
+                    <select name="sede_id" id="sede_inicial" required class="form-control">
+                    <option value="">Seleccionar sede</option>
+                    {% for sede in sedes %}
+                    <option value="{{ sede.id }}">{{ sede.nombre }}</option>
+                    {% endfor %}
+           </select>
+                  <small>Selecciona la sede donde se almacenará inicialmente este producto</small>
+            </div>
+
+<div class="form-group">
+    <label for="stock_inicial">Stock Inicial:</label>
+    <input type="number" name="stock_inicial" id="stock_inicial" value="0" min="0" required class="form-control">
+    <small>Cantidad inicial en inventario</small>
+</div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="productoMateriaPrima" name="es_materia_prima">
+                        <span class="checkmark"></span>
+                        ¿Es materia prima?
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="productoActivo" name="activo" checked>
+                        <span class="checkmark"></span>
+                        Producto activo
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalProducto()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    💾 Guardar Producto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para gestión de productos en tabla */
+.admin-container {
+    padding: 2rem 0;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 2.2rem;
+}
+
+.page-subtitle {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Estadísticas Rápidas */
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    border-left: 4px solid #3498db;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Filtros Avanzados */
+.filters-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.filters-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Tabla de Productos */
+.table-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.result-count {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s;
+}
+
+.data-table th:hover {
+    background: #e9ecef;
+}
+
+.data-table th[data-sort]::after {
+    content: ' ↕';
+    opacity: 0.5;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+    vertical-align: top;
+}
+
+/* Estilos específicos de las celdas */
+.product-id {
+    font-weight: 600;
+    color: #3498db;
+    font-family: 'Courier New', monospace;
+}
+
+.product-info {
+    min-width: 200px;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.product-description {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.product-price {
+    font-weight: 600;
+    color: #27ae60;
+    font-family: 'Courier New', monospace;
+}
+
+.product-unit {
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    color: #5a6c7d;
+}
+
+/* Badges y Estados */
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-category {
+    background: #e8f4fd;
+    color: #3498db;
+}
+
+.badge-materia {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-producto {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Botones de Acción */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-inventory:hover {
+    background: #9b59b6;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Estados vacíos */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-content {
+    text-align: center;
+    color: #7f8c8d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.empty-content p {
+    margin: 0 0 2rem 0;
+}
+
+/* Paginación */
+.table-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.page-info {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+/* Modal (mantener igual que antes) */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.close {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+}
+
+.close:hover {
+    color: #e74c3c;
+}
+
+.modal-form {
+    padding: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Botones (mantener igual) */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #3498db;
+    color: #3498db;
+}
+
+.btn-outline:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .table-actions {
+        justify-content: space-between;
+    }
+    
+    .data-table {
+        font-size: 0.9rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+// Funciones JavaScript REALES
+let productoEditando = null;
+
+async function editarProducto(id) {
+    try {
+        const response = await fetch(`/admin/productos/${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalProducto(data.producto);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error al cargar el producto: ' + error.message);
+    }
+}
+
+function mostrarModalProducto(producto = null) {
+    productoEditando = producto;
+    const modal = document.getElementById('modalProducto');
+    const titulo = document.getElementById('modalTitulo');
+    const form = document.getElementById('formProducto');
+    
+    if (producto) {
+        titulo.textContent = 'Editar Producto';
+        // Llenar el formulario con datos del producto
+        document.getElementById('productoNombre').value = producto.nombre;
+        document.getElementById('productoDescripcion').value = producto.descripcion || '';
+        document.getElementById('productoPrecio').value = producto.precio;
+        document.getElementById('productoCategoria').value = producto.categoria;
+        document.getElementById('productoUnidad').value = producto.unidad_medida;
+        document.getElementById('productoMateriaPrima').checked = producto.es_materia_prima;
+        document.getElementById('productoActivo').checked = producto.activo;
+        
+        // ✅ AGREGAR ESTOS NUEVOS CAMPOS:
+        if (document.getElementById('sede_inicial')) {
+            document.getElementById('sede_inicial').value = producto.sede_id || '';
+        }
+        if (document.getElementById('stock_inicial')) {
+            document.getElementById('stock_inicial').value = producto.stock_inicial || 0;
+        }
+    } else {
+        titulo.textContent = 'Agregar Nuevo Producto';
+        form.reset();
+        // ✅ Poner valores por defecto en los nuevos campos
+        if (document.getElementById('stock_inicial')) {
+            document.getElementById('stock_inicial').value = 10;
+        }
+    }
+    
+    modal.style.display = 'block';
+}
+
+function cerrarModalProducto() {
+    document.getElementById('modalProducto').style.display = 'none';
+    productoEditando = null;
+}
+
+async function eliminarProducto(id) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este producto?\nEsta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/productos/${id}/eliminar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Producto eliminado correctamente');
+            location.reload(); // Recargar la página para ver los cambios
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Error al eliminar el producto: ' + error.message);
+    }
+}
+
+function verInventario(id) {
+    // Redirigir a la página de inventario con filtro por producto
+    window.location.href = `/admin/inventario?producto=${id}`;
+}
+
+// Manejar envío del formulario
+document.getElementById('formProducto').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        nombre: formData.get('nombre'),
+        descripcion: formData.get('descripcion'),
+        precio: parseFloat(formData.get('precio')),
+        categoria: formData.get('categoria'),
+        unidad_medida: formData.get('unidad'),
+        es_materia_prima: formData.get('es_materia_prima') === 'on',
+        activo: formData.get('activo') === 'on',
+        sede_id: formData.get('sede_id'), 
+        stock_inicial: parseInt(formData.get('stock_inicial'))
+    };
+    
+    // Validaciones básicas
+    if (!data.nombre.trim()) {
+        alert('❌ El nombre del producto es requerido');
+        return;
+    }
+    
+    if (data.precio <= 0) {
+        alert('❌ El precio debe ser mayor a 0');
+        return;
+    }
+    
+    if (!data.unidad_medida.trim()) {
+        alert('❌ La unidad de medida es requerida');
+        return;
+    }
+
+    if (!data.sede_id) {
+        alert('❌ Por favor selecciona una sede inicial');
+        return;
+    }
+    
+    if (data.stock_inicial < 0) {
+        alert('❌ El stock inicial no puede ser negativo');
+        return;
+    }
+    
+    try {
+        const url = productoEditando 
+            ? `/admin/productos/${productoEditando.id}/editar`
+            : '/admin/productos/crear';
+            
+        const method = 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Producto ${productoEditando ? 'actualizado' : 'creado'} correctamente`);
+            cerrarModalProducto();
+            location.reload(); // Recargar para ver los cambios
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error al guardar el producto: ' + error.message);
+    }
+});
+
+function aplicarFiltros() {
+    const categoria = document.getElementById('filtroCategoria').value;
+    const tipo = document.getElementById('filtroTipo').value;
+    const estado = document.getElementById('filtroEstado').value;
+    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase();
+    
+    const filas = document.querySelectorAll('.product-row');
+    let visibleCount = 0;
+    
+    filas.forEach(fila => {
+        let mostrar = true;
+        
+        if (categoria && fila.dataset.categoria !== categoria) {
+            mostrar = false;
+        }
+        
+        if (tipo && fila.dataset.tipo !== tipo) {
+            mostrar = false;
+        }
+        
+        if (estado && fila.dataset.estado !== estado) {
+            mostrar = false;
+        }
+        
+        if (busqueda && !fila.dataset.nombre.includes(busqueda)) {
+            mostrar = false;
+        }
+        
+        fila.style.display = mostrar ? '' : 'none';
+        if (mostrar) visibleCount++;
+    });
+    
+    document.getElementById('contadorResultados').textContent = 
+        `Mostrando ${visibleCount} de ${filas.length} productos`;
+}
+
+function resetearFiltros() {
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('filtroTipo').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('filtroBusqueda').value = '';
+    aplicarFiltros();
+}
+
+function exportarProductos() {
+    alert('📊 Exportando productos a Excel - Funcionalidad próximamente');
+}
+
+// Cerrar modal al hacer clic fuera
+window.onclick = function(event) {
+    const modal = document.getElementById('modalProducto');
+    if (event.target === modal) {
+        cerrarModalProducto();
+    }
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    aplicarFiltros();
+});
+</script>
+{% endblock %}

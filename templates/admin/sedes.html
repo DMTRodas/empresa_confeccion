@@ -1,0 +1,837 @@
+<style>
+/* Estilos específicos para gestión de sedes - MATCH PERFECTO CON DASHBOARD */
+
+.admin-container {
+    padding: 2rem 0;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 2.2rem;
+}
+
+.page-subtitle {
+    color: #7f8c8d;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Estadísticas Rápidas - Igual al dashboard */
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.stat-item {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid #3498db;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.stat-item:nth-child(2) {
+    border-left-color: #27ae60;
+}
+
+.stat-item:nth-child(3) {
+    border-left-color: #9b59b6;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #7f8c8d;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Tabla de Sedes - Estilo consistente */
+.table-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.result-count {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+    vertical-align: top;
+}
+
+/* Estilos específicos de celdas */
+.product-id {
+    font-weight: 600;
+    color: #3498db;
+    font-family: 'Courier New', monospace;
+}
+
+.product-info {
+    min-width: 150px;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.product-price {
+    font-weight: 600;
+    color: #27ae60;
+    font-family: 'Courier New', monospace;
+}
+
+/* Badges y Estados - Consistentes con productos */
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-category {
+    background: #e8f4fd;
+    color: #3498db;
+}
+
+.badge-materia {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-producto {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Botones de Acción - Igual que productos */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-action {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-inventory:hover {
+    background: #9b59b6;
+    color: white;
+}
+
+/* Estados vacíos */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-content {
+    text-align: center;
+    color: #7f8c8d;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.empty-content p {
+    margin: 0 0 2rem 0;
+}
+
+/* Modal - Estilo consistente */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    border-top: 5px solid #3498db;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.close {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.3s;
+}
+
+.close:hover {
+    color: #e74c3c;
+}
+
+.modal-form {
+    padding: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.readonly-input {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Botones - Sistema de diseño unificado */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .quick-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .table-actions {
+        justify-content: space-between;
+    }
+    
+    .data-table {
+        font-size: 0.9rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .stat-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    /* Agregar esto en tus estilos */
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+}
+
+</style>
+
+{% extends "base.html" %}
+
+{% block title %}Gestión de Sedes - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1>🏭 Gestión de Sedes</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+                <button class="btn btn-primary" onclick="mostrarModalSede()">
+                    ➕ Agregar Sede
+                </button>
+            </div>
+        </div>
+        <p class="page-subtitle">Administra todas las sedes y ubicaciones de la empresa</p>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="quick-stats">
+        <div class="stat-item">
+            <span class="stat-number">{{ sedes|length }}</span>
+            <span class="stat-label">Total Sedes</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ sedes|selectattr('tipo', 'equalto', 'fabrica')|list|length }}</span>
+            <span class="stat-label">Fábricas</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ sedes|selectattr('tipo', 'equalto', 'almacen')|list|length }}</span>
+            <span class="stat-label">Almacenes</span>
+        </div>
+    </div>
+
+    <!-- Tabla de Sedes -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Lista de Sedes</h3>
+            <div class="table-actions">
+                <span class="result-count">
+                    Mostrando {{ sedes|length }} sedes
+                </span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>País</th>
+                        <th>Tipo</th>
+                        <th>Dirección</th>
+                        <th>Capacidad</th>
+                        <th>Contacto</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sede in sedes %}
+                    <tr>
+                        <td class="product-id">#{{ sede.id }}</td>
+                        <td class="product-info">
+                            <div class="product-name">{{ sede.nombre }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-category">{{ sede.pais }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if sede.tipo == 'fabrica' %}badge-materia{% else %}badge-producto{% endif %}">
+                                {{ sede.tipo|title }}
+                            </span>
+                        </td>
+                        <td>{{ sede.direccion or 'N/A' }}</td>
+                        <td class="product-price">{{ sede.capacidad }} m²</td>
+                        <td>
+                            <small>{{ sede.telefono or 'N/A' }}</small><br>
+                            <small>{{ sede.email or 'N/A' }}</small>
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn-action btn-edit" onclick="editarSede({{ sede.id }})" title="Editar sede">
+                                ✏️
+                            </button>
+                            <button class="btn-action btn-inventory" onclick="verInventarioSede({{ sede.id }})" title="Ver inventario">
+                                📊
+                            </button>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="confirmarEliminarSede({{ sede.id }}, '{{ sede.nombre }}')" title="Eliminar sede">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-content">
+                                <div class="empty-icon">🏭</div>
+                                <h4>No hay sedes registradas</h4>
+                                <p>Comienza agregando tu primera sede.</p>
+                                <button class="btn btn-primary" onclick="mostrarModalSede()">
+                                    ➕ Agregar Primera Sede
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Agregar/Editar Sede -->
+<div id="modalSede" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTituloSede">Agregar Nueva Sede</h3>
+            <span class="close" onclick="cerrarModalSede()">&times;</span>
+        </div>
+        <form id="formSede" class="modal-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sedeNombre">Nombre de la Sede *</label>
+                    <input type="text" id="sedeNombre" name="nombre" required placeholder="Ej: Sede Central Guatemala">
+                </div>
+                <div class="form-group">
+                    <label for="sedePais">País *</label>
+                    <select id="sedePais" name="pais_id" required>
+                        <option value="">Seleccionar país</option>
+                        {% for pais in paises %}
+                        <option value="{{ pais.id }}">{{ pais.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sedeTipo">Tipo de Sede *</label>
+                    <select id="sedeTipo" name="tipo" required>
+                        <option value="">Seleccionar tipo</option>
+                        <option value="fabrica">Fábrica</option>
+                        <option value="almacen">Almacén</option>
+                        <option value="mixto">Mixto (Fábrica + Almacén)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sedeCapacidad">Capacidad (m²)</label>
+                    <input type="number" id="sedeCapacidad" name="capacidad_almacenaje" min="0" placeholder="1000">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="sedeDireccion">Dirección</label>
+                <textarea id="sedeDireccion" name="direccion" rows="2" placeholder="Dirección completa..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sedeTelefono">Teléfono</label>
+                    <input type="text" id="sedeTelefono" name="telefono" placeholder="+502 1234-5678">
+                </div>
+                <div class="form-group">
+                    <label for="sedeEmail">Email</label>
+                    <input type="email" id="sedeEmail" name="email" placeholder="sede@empresa.com">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalSede()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    💾 Guardar Sede
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal para Confirmar Eliminación -->
+<div id="modalConfirmarEliminar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="cerrarModalConfirmar()">&times;</span>
+        </div>
+        <div class="modal-form">
+            <p id="mensajeConfirmacion">¿Está seguro de que desea eliminar esta sede?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalConfirmar()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">
+                    🗑️ Eliminar Sede
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<style>
+/* Estilos específicos para sedes */
+.badge-materia { background: #fff3cd; color: #856404; }
+.badge-producto { background: #d4edda; color: #155724; }
+</style>
+
+<script>
+let sedeEditando = null;
+let sedeAEliminar = null;
+
+function mostrarModalSede(sede = null) {
+    sedeEditando = sede;
+    const modal = document.getElementById('modalSede');
+    const titulo = document.getElementById('modalTituloSede');
+    
+    if (sede) {
+        titulo.textContent = 'Editar Sede';
+        // Llenar formulario con datos existentes
+        document.getElementById('sedeNombre').value = sede.nombre;
+        document.getElementById('sedePais').value = sede.pais_id;
+        document.getElementById('sedeTipo').value = sede.tipo;
+        document.getElementById('sedeCapacidad').value = sede.capacidad_almacenaje || '';
+        document.getElementById('sedeDireccion').value = sede.direccion || '';
+        document.getElementById('sedeTelefono').value = sede.telefono || '';
+        document.getElementById('sedeEmail').value = sede.email || '';
+    } else {
+        titulo.textContent = 'Agregar Nueva Sede';
+        document.getElementById('formSede').reset();
+    }
+    
+    modal.style.display = 'block';
+}
+
+function cerrarModalSede() {
+    document.getElementById('modalSede').style.display = 'none';
+    sedeEditando = null;
+}
+
+function confirmarEliminarSede(id, nombre) {
+    sedeAEliminar = id;
+    const modal = document.getElementById('modalConfirmarEliminar');
+    const mensaje = document.getElementById('mensajeConfirmacion');
+    
+    mensaje.textContent = `¿Está seguro de que desea eliminar la sede "${nombre}"? Esta acción no se puede deshacer.`;
+    modal.style.display = 'block';
+}
+
+function cerrarModalConfirmar() {
+    document.getElementById('modalConfirmarEliminar').style.display = 'none';
+    sedeAEliminar = null;
+}
+
+async function eliminarSede(id) {
+    try {
+        const response = await fetch(`/admin/sedes/${id}/eliminar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('✅ Sede eliminada correctamente');
+            // Recargar la página para ver los cambios
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error al eliminar la sede: ' + error.message);
+    }
+}
+
+function editarSede(id) {
+    // Obtener datos de la sede desde el servidor
+    fetch(`/admin/sedes/${id}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar la sede');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                mostrarModalSede(data.sede);
+            } else {
+                alert('Error: ' + (data.error || 'No se pudo cargar la sede'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar la sede: ' + error.message);
+        });
+}
+
+function verInventarioSede(id) {
+    window.location.href = `/admin/inventario?sede=${id}`;
+}
+
+// Configurar el botón de eliminar
+document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+    if (sedeAEliminar) {
+        eliminarSede(sedeAEliminar);
+        cerrarModalConfirmar();
+    }
+});
+
+// Manejar envío del formulario
+document.getElementById('formSede').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        nombre: formData.get('nombre'),
+        pais_id: parseInt(formData.get('pais_id')),
+        tipo: formData.get('tipo'),
+        direccion: formData.get('direccion'),
+        capacidad_almacenaje: parseInt(formData.get('capacidad_almacenaje') || 0),
+        telefono: formData.get('telefono'),
+        email: formData.get('email')
+    };
+
+    // Validaciones
+    if (!data.nombre.trim()) {
+        alert('❌ El nombre de la sede es requerido');
+        return;
+    }
+
+    try {
+        const url = sedeEditando 
+            ? `/admin/sedes/${sedeEditando.id}/editar`
+            : '/admin/sedes/crear';
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(`✅ Sede ${sedeEditando ? 'actualizada' : 'creada'} correctamente`);
+            cerrarModalSede();
+            location.reload();
+        } else {
+            alert('❌ Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('❌ Error al guardar la sede: ' + error.message);
+    }
+});
+
+// Cerrar modales al hacer clic fuera
+window.onclick = function(event) {
+    const modalSede = document.getElementById('modalSede');
+    const modalConfirmar = document.getElementById('modalConfirmarEliminar');
+    
+    if (event.target === modalSede) {
+        cerrarModalSede();
+    }
+    if (event.target === modalConfirmar) {
+        cerrarModalConfirmar();
+    }
+}
+</script>
+
+{% endblock %}
+
